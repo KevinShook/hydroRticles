@@ -1,0 +1,84 @@
+---
+title: "Joining data sets"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Hydrologists often need to join time series which do not have values at the same time intervals. Fortunately, the `dplyr` package has functions which can help. The following is a simple example of how you can align time series.
+
+We will be loading time series of annual peaks at two stations on the same river. We will align them in time, so that we can plot one against the other and do a regression.
+
+We can load the data using the **tidyhydat** package function `hy_annual_instant_peaks`.
+```{r message=FALSE}
+library(tidyhydat)
+station1ID <- "05EF001"   # North Saskatchewan at Deer Creek
+station2ID <- "05GG001"   # North Saskatchewan at Prince Albert
+
+station1_peaks <- hy_annual_instant_peaks(station1ID)
+station2_peaks <- hy_annual_instant_peaks(station2ID)
+```
+
+We can now selecte only the annual maximum peak flows are selected, and the dates. The variable names are changed to the station IDs so that they can be identified when combining the time series.
+
+```{r message=FALSE}
+station1_max_peak_flows <- 
+  station1_peaks[(station1_peaks$Parameter == "Flow") & 
+                   (station1_peaks$PEAK_CODE == "MAX") , 
+                 c("Date", "Value")]
+
+names(station1_max_peak_flows)[2] <- station1ID
+
+station2_max_peak_flows <- 
+  station2_peaks[(station2_peaks$Parameter == "Flow") & 
+                   (station2_peaks$PEAK_CODE == "MAX") , 
+                 c("Date", "Value")] 
+
+names(station2_max_peak_flows)[2] <- station2ID
+```
+
+We also need to add the year of each peak, to the time series to be joined.
+```{r message=FALSE}
+station1_max_peak_flows$year <- as.numeric(format(station1_max_peak_flows$Date, format = "%Y"))
+
+station2_max_peak_flows$year <- as.numeric(format(station2_max_peak_flows$Date, format = "%Y"))
+```
+
+
+Checking the data sets show that the time series span differing years.
+```{r}
+summary(station1_max_peak_flows)
+summary(station2_max_peak_flows)
+```
+
+We can now align the data sets, using the `inner_join` function from the package **dplyr**. This function only selects peaks which have mathcing key values, in this case the years. Because the `Date` variable was in both data frames, both are in the joined data frame.
+
+```{r message=FALSE}
+library(dplyr)
+common_flows <- inner_join(station1_max_peak_flows, station2_max_peak_flows, by = "year")
+
+summary(common_flows$year)
+```
+
+Although we could plot the flows against each other, we are interested
+in peaks occurring at boith gauges. So we can select only events where the downstream peak is a few days after the upstream peak.
+```{r message=FALSE}
+common_flows$delta_t <- common_flows$Date.y - common_flows$Date.x
+
+common_events <- common_flows[(common_flows$delta_t >= 3) & (common_flows$delta_t <= 12),]
+```
+
+Having peaks which are at both gauges, we can plot the relationship between the peaks using **ggplot2**.
+```{r message=FALSE}
+library(ggplot2)
+p <- ggplot(common_events, aes(`05EF001`, `05GG001`)) +
+  geom_point() +
+  xlab("Upstream (05EF001) peak discharge (m³/s)") +
+  ylab("Downstream (05GG001) peak discharge (m³/s)") +
+  geom_smooth(method = lm)
+p
+       
+```
+
