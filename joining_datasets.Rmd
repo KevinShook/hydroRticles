@@ -7,7 +7,9 @@ output: word_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Hydrologists often need to join time series which do not have values at the same time intervals. Fortunately, the `dplyr` package has functions which can help. The following is a simple example of how you can align time series.
+Hydrologists often need to use more than one time series in their analyses. Even if the data are collected at the same intervals (e.g. hourly, daily), time series often span differing time periods, and can have differing intervals with missing values. To ensure that they are comparing the same things, hydrologists need simple ways of selecting values collected at the same times.
+
+Fortunately, the `dplyr` package has functions which can help. The following examples show how you can align time series for analysis and plotting.
 
 We will be loading time series of annual peaks at two stations on the same river. We will align them in time, so that we can plot one against the other and do a regression.
 
@@ -53,7 +55,7 @@ summary(station1_max_peak_flows)
 summary(station2_max_peak_flows)
 ```
 
-We can now align the data sets, using the `inner_join` function from the package **dplyr**. This function only selects peaks which have mathcing key values, in this case the years. Because the `Date` variable was in both data frames, both are in the joined data frame.
+We can now align the data sets, using the `inner_join` function from the package **dplyr**. This function only selects peaks which have matching key values, in this case the years. Because the `Date` variable was in both data frames, both dates are in the joined data frame.
 
 ```{r message=FALSE}
 library(dplyr)
